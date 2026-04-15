@@ -14,6 +14,8 @@ class PredictionRequest(BaseModel):
     gender: str = Field(..., description="Gender-Neutral or Female-only")
     quota: str = Field(default="AI", description="AI, HS, OS, etc.")
     preferred_branch: str = Field(default="Any", description="Keyword filter on program name")
+    preferred_region: str = Field(default="Any", description="North, South, East, West, Any")
+    preferred_state: str = Field(default="Any", description="State name, e.g. 'Tamil Nadu', or 'Any'")
     institute_types: List[str] = Field(default=[], description="Filter: IIT, NIT, IIIT, GFTI")
 
 
@@ -26,6 +28,8 @@ class CollegeResult(BaseModel):
     gender: str
     opening_rank: int
     closing_rank: int
+    state: str
+    region: str
     score: float = Field(..., ge=0.0, le=1.0)
     classification: str  # Dream, Safe, Backup
     match_level: str  # High Match, Medium Match, Low Match

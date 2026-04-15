@@ -108,13 +108,17 @@ def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
     Main prediction pipeline:
     1. Filter eligible colleges (rank <= closing_rank)
     2. Filter by institute_type
-    3. Score each college
-    4. Classify into Dream / Safe / Backup
-    5. Return sorted results
+    3. Filter by region and state
+    4. Score each college
+    5. Classify into Dream / Safe / Backup
+    6. Return sorted results
     """
     results = {"dream": [], "safe": [], "backup": []}
 
     allowed_types = [t.lower() for t in request.institute_types] if request.institute_types else []
+
+    pref_region = request.preferred_region.lower()
+    pref_state = request.preferred_state.lower()
 
     for college in colleges:
         # Step 1: Filter by rank eligibility
@@ -126,7 +130,13 @@ def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
         if allowed_types and inst_type.lower() not in allowed_types:
             continue
 
-        # Step 3: Compute weighted score
+        # Step 3: Region and State filtering
+        if pref_region != "any" and college["region"].lower() != pref_region:
+            continue
+        if pref_state != "any" and college["state"].lower() != pref_state:
+            continue
+
+        # Step 4: Compute weighted score
         branch_score = compute_branch_score(request.preferred_branch, college["program"])
         safety_score = compute_cutoff_safety(request.rank, college["opening_rank"], college["closing_rank"])
         prestige_score = compute_institute_prestige(college["institute"])
@@ -138,11 +148,11 @@ def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
         )
         total_score = round(total_score, 3)
 
-        # Step 4: Classify
+        # Step 5: Classify
         classification = classify_college(request.rank, college["opening_rank"], college["closing_rank"])
         match_level = get_match_level(total_score)
 
-        # Step 5: Build reason
+        # Step 6: Build reason
         reason = build_reason(request, college, classification, total_score)
 
         result = CollegeResult(
@@ -153,6 +163,8 @@ def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
             gender=college["gender"],
             opening_rank=college["opening_rank"],
             closing_rank=college["closing_rank"],
+            state=college["state"],
+            region=college["region"],
             score=total_score,
             classification=classification,
             match_level=match_level,

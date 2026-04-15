@@ -29,6 +29,10 @@ function CollegeCard({ college }) {
           <span className="detail-chip-icon">🏫</span>
           {college.institute_type}
         </span>
+        <span className="detail-chip" title="Location (State, Region)">
+          <span className="detail-chip-icon">🗺️</span>
+          {college.state}, {college.region}
+        </span>
         <span className="detail-chip" title="Opening & Closing Rank">
           <span className="detail-chip-icon">🎯</span>
           {college.opening_rank.toLocaleString()} → {college.closing_rank.toLocaleString()}

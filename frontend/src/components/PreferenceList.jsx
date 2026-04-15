@@ -5,7 +5,7 @@ function PreferenceList({ colleges, onClose }) {
 
   const handleCopy = () => {
     const text = colleges
-      .map((c, i) => `${i + 1}. ${c.institute} — ${c.program} - ${c.quota} - ${c.seat_type} (Score: ${Math.round(c.score * 100)}%)`)
+      .map((c, i) => `${i + 1}. ${c.institute} (${c.state}, ${c.region}) — ${c.program} - ${c.quota} - ${c.seat_type} (Score: ${Math.round(c.score * 100)}%)`)
       .join('\n');
 
     navigator.clipboard.writeText(text).then(() => {
@@ -50,7 +50,7 @@ function PreferenceList({ colleges, onClose }) {
               <div className="preference-item" key={index}>
                 <div className="preference-rank">{index + 1}</div>
                 <div className="preference-info">
-                  <div className="preference-college">{college.institute}</div>
+                  <div className="preference-college">{college.institute} <span style={{ fontSize: '0.85em', color: '#666' }}>({college.state})</span></div>
                   <div className="preference-branch">
                     {college.program} · Quota: {college.quota} · closing: {college.closing_rank.toLocaleString()}
                   </div>

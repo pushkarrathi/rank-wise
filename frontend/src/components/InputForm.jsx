@@ -6,6 +6,14 @@ const GENDERS = ["Gender-Neutral", "Female-only (including Supernumerary)"];
 const QUOTAS = ["AI", "HS", "OS", "GO", "JK", "LA"];
 const ROUNDS = [1, 2, 3, 4, 5];
 const INSTITUTE_TYPES = ["IIT", "NIT", "IIIT", "GFTI"];
+const REGIONS = ["Any", "North", "South", "East", "West"];
+const STATES_MAP = {
+  "Any": [],
+  "North": ["Delhi", "Punjab", "Haryana", "Uttar Pradesh", "Uttarakhand", "Himachal Pradesh", "Jammu & Kashmir", "Chandigarh", "Rajasthan", "Madhya Pradesh"],
+  "South": ["Tamil Nadu", "Karnataka", "Telangana", "Andhra Pradesh", "Kerala", "Puducherry"],
+  "East": ["West Bengal", "Odisha", "Bihar", "Jharkhand", "Assam", "Meghalaya", "Mizoram", "Nagaland", "Tripura", "Arunachal Pradesh", "Sikkim", "Manipur", "Chhattisgarh"],
+  "West": ["Maharashtra", "Gujarat", "Goa"]
+};
 
 function InputForm({ onSubmit, loading }) {
   const [formData, setFormData] = useState({
@@ -15,6 +23,8 @@ function InputForm({ onSubmit, loading }) {
     gender: 'Gender-Neutral',
     quota: 'AI',
     preferred_branch: '',
+    preferred_region: 'Any',
+    preferred_state: 'Any',
     institute_types: {
       IIT: true,
       NIT: true,
@@ -39,7 +49,11 @@ function InputForm({ onSubmit, loading }) {
   }, []);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'preferred_region') {
+      setFormData(prev => ({ ...prev, preferred_region: value, preferred_state: 'Any' }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleInstTypeChange = (type) => {
@@ -70,6 +84,8 @@ function InputForm({ onSubmit, loading }) {
 
     onSubmit(payload);
   };
+
+  const availableStates = STATES_MAP[formData.preferred_region] || [];
 
   return (
     <form className="form-container" onSubmit={handleSubmit} id="prediction-form">
@@ -169,6 +185,38 @@ function InputForm({ onSubmit, loading }) {
               <option key={p} value={p} />
             ))}
           </datalist>
+        </div>
+
+        {/* Preferred Region */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="region-select">Preferred Region</label>
+          <select
+            id="region-select"
+            className="form-select"
+            value={formData.preferred_region}
+            onChange={(e) => handleChange('preferred_region', e.target.value)}
+          >
+            {REGIONS.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Preferred State */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="state-select">Preferred State</label>
+          <select
+            id="state-select"
+            className="form-select"
+            value={formData.preferred_state}
+            onChange={(e) => handleChange('preferred_state', e.target.value)}
+            disabled={formData.preferred_region === 'Any'}
+          >
+            <option value="Any">Any</option>
+            {availableStates.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
 
         {/* Institute Types */}
