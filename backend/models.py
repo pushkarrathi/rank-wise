@@ -9,29 +9,28 @@ from typing import Optional, List
 class PredictionRequest(BaseModel):
     """Input from the user form."""
     rank: int = Field(..., gt=0, description="JEE rank")
-    exam_type: str = Field(..., description="JEE Main or Advanced")
-    category: str = Field(..., description="General, OBC, SC, ST, EWS")
-    preferred_branch: str = Field(..., description="Preferred branch like CSE, ECE, etc.")
-    preferred_region: str = Field(default="Any", description="North, South, East, West, Any")
-    max_fee: Optional[int] = Field(default=None, description="Maximum fee range (optional)")
-    campus_preference: str = Field(default="No preference", description="Large / Small / No preference")
-    food_preference: str = Field(default="No preference", description="Veg only / Non-veg ok / No preference")
+    round_no: int = Field(default=5, ge=1, le=5, description="Which round (1-5), default last round")
+    seat_type: str = Field(..., description="OPEN, EWS, OBC-NCL, SC, ST")
+    gender: str = Field(..., description="Gender-Neutral or Female-only")
+    quota: str = Field(default="AI", description="AI, HS, OS, etc.")
+    preferred_branch: str = Field(default="Any", description="Keyword filter on program name")
+    institute_types: List[str] = Field(default=[], description="Filter: IIT, NIT, IIIT, GFTI")
 
 
 class CollegeResult(BaseModel):
     """A single college result with scoring details."""
-    college_name: str
-    branch: str
+    institute: str
+    program: str
+    quota: str
+    seat_type: str
+    gender: str
     opening_rank: int
     closing_rank: int
-    region: str
-    average_fees: int
-    campus_size: str
-    food_option: str
     score: float = Field(..., ge=0.0, le=1.0)
-    classification: str  # Dream, Safe, or Backup
+    classification: str  # Dream, Safe, Backup
     match_level: str  # High Match, Medium Match, Low Match
-    reason: str  # Human-readable explanation
+    reason: str 
+    institute_type: str  # IIT, NIT, IIIT, GFTI
 
 
 class PredictionResponse(BaseModel):

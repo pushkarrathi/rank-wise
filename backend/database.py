@@ -1,14 +1,15 @@
 """
 Database module — SQLite setup and data access layer.
-Loads mock college data from JSON and provides query functions.
+Loads real JoSAA college data from CSVs and provides query functions.
 """
 
 import sqlite3
-import json
+import csv
 import os
+import glob
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "college_predictor.db")
-DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "colleges.json")
+DB_PATH = os.path.join(os.path.dirname(__file__), "rank_wise.db")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 
 def get_connection():
@@ -19,7 +20,7 @@ def get_connection():
 
 
 def init_db():
-    """Create tables and seed data from colleges.json."""
+    """Create tables and seed data from CSV files."""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -27,16 +28,14 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS colleges (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            college_name TEXT NOT NULL,
-            branch TEXT NOT NULL,
+            institute TEXT NOT NULL,
+            program TEXT NOT NULL,
+            quota TEXT NOT NULL,
+            seat_type TEXT NOT NULL,
+            gender TEXT NOT NULL,
             opening_rank INTEGER NOT NULL,
             closing_rank INTEGER NOT NULL,
-            category TEXT NOT NULL,
-            exam_type TEXT NOT NULL,
-            region TEXT NOT NULL,
-            average_fees INTEGER NOT NULL,
-            campus_size TEXT NOT NULL,
-            food_option TEXT NOT NULL
+            round INTEGER NOT NULL
         )
     """)
 
@@ -45,45 +44,63 @@ def init_db():
     count = cursor.fetchone()[0]
 
     if count == 0:
-        # Load and insert mock data
-        with open(DATA_PATH, "r", encoding="utf-8") as f:
-            colleges = json.load(f)
+        print("[INFO] Seeding database from CSVs...")
+        inserted = 0
+        csv_files = glob.glob(os.path.join(DATA_DIR, "2024_Round_*.csv"))
+        for file_path in csv_files:
+            # Extract round number from filename (e.g., 2024_Round_1.csv -> 1)
+            filename = os.path.basename(file_path)
+            try:
+                round_no = int(filename.split('_')[-1].split('.')[0])
+            except ValueError:
+                continue
 
-        for c in colleges:
-            cursor.execute("""
-                INSERT INTO colleges 
-                (college_name, branch, opening_rank, closing_rank, category, exam_type, region, average_fees, campus_size, food_option)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                c["college_name"],
-                c["branch"],
-                c["opening_rank"],
-                c["closing_rank"],
-                c["category"],
-                c["exam_type"],
-                c["region"],
-                c["average_fees"],
-                c["campus_size"],
-                c["food_option"],
-            ))
+            with open(file_path, "r", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                for row in reader:
+                    if len(row) < 7:
+                        continue
+                    
+                    try:
+                        opening_rank = int(row[5].replace('P', ''))
+                        closing_rank = int(row[6].replace('P', ''))
+                    except ValueError:
+                        continue
+
+                    cursor.execute("""
+                        INSERT INTO colleges 
+                        (institute, program, quota, seat_type, gender, opening_rank, closing_rank, round)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        row[0].strip(),
+                        row[1].strip(),
+                        row[2].strip(),
+                        row[3].strip(),
+                        row[4].strip(),
+                        opening_rank,
+                        closing_rank,
+                        round_no
+                    ))
+                    inserted += 1
 
         conn.commit()
-        print(f"[OK] Seeded {len(colleges)} college entries into database.")
+        print(f"[OK] Seeded {inserted} college entries into database.")
     else:
         print(f"[INFO] Database already has {count} entries, skipping seed.")
 
     conn.close()
 
 
-def get_colleges(exam_type: str, category: str):
-    """Fetch colleges matching the given exam type and category."""
+def get_colleges(round_no: int, seat_type: str, gender: str, quota: str):
+    """Fetch colleges matching the given round, seat type, gender, and quota."""
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT * FROM colleges 
-        WHERE exam_type = ? AND category = ?
-    """, (exam_type, category))
+        WHERE round = ? AND seat_type = ? AND gender = ? AND quota = ?
+    """, (round_no, seat_type, gender, quota))
 
     rows = cursor.fetchall()
     conn.close()
@@ -92,11 +109,20 @@ def get_colleges(exam_type: str, category: str):
     return [dict(row) for row in rows]
 
 
-def get_all_branches():
-    """Return a distinct list of branches available."""
+def get_all_programs():
+    """Return a distinct list of programs available."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT branch FROM colleges ORDER BY branch")
-    branches = [row[0] for row in cursor.fetchall()]
+    cursor.execute("SELECT DISTINCT program FROM colleges ORDER BY program")
+    programs = [row[0] for row in cursor.fetchall()]
     conn.close()
-    return branches
+    return programs
+
+def get_all_institutes():
+    """Return a distinct list of institutes available."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT institute FROM colleges ORDER BY institute")
+    institutes = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return institutes

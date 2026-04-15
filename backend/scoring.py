@@ -4,35 +4,27 @@ Scoring engine — filters, scores, and classifies colleges for a given user pro
 
 from models import PredictionRequest, CollegeResult
 
-# Related branches for partial matching
-RELATED_BRANCHES = {
-    "CSE": ["ECE", "Electrical"],
-    "ECE": ["CSE", "Electrical"],
-    "Electrical": ["ECE", "CSE"],
-    "Mechanical": ["Civil"],
-    "Civil": ["Mechanical"],
-    "Chemical": ["Mechanical"],
-}
-
-
-def compute_branch_score(preferred: str, college_branch: str) -> float:
-    """1.0 for exact match, 0.5 for related branch, 0.0 otherwise."""
-    if preferred.lower() == college_branch.lower():
-        return 1.0
-    related = RELATED_BRANCHES.get(preferred, [])
-    if college_branch in related:
+def compute_branch_score(preferred_branch: str, program_name: str) -> float:
+    """Keyword matching on program name. Example: 'Computer Science' in 'Computer Science and Engineering' -> 1.0"""
+    if preferred_branch.lower() == "any" or not preferred_branch:
         return 0.5
-    return 0.0
-
-
-def compute_region_score(preferred: str, college_region: str) -> float:
-    """1.0 for exact match, 0.5 for 'Any', 0.0 otherwise."""
-    if preferred == "Any":
-        return 0.5
-    if preferred.lower() == college_region.lower():
+    
+    # Simple matching (can be improved with fuzzing)
+    if preferred_branch.lower() in program_name.lower():
         return 1.0
     return 0.0
 
+def compute_institute_prestige(institute_name: str) -> float:
+    """Give higher weight to IITs > NITs > IIITs > GFTIs"""
+    name_lower = institute_name.lower()
+    if "indian institute of technology" in name_lower and "information" not in name_lower:
+        return 1.0
+    elif "national institute of technology" in name_lower:
+        return 0.8
+    elif "indian institute of information technology" in name_lower:
+        return 0.6
+    else:
+        return 0.4 # GFTIs or others
 
 def compute_cutoff_safety(rank: int, opening_rank: int, closing_rank: int) -> float:
     """
@@ -40,33 +32,15 @@ def compute_cutoff_safety(rank: int, opening_rank: int, closing_rank: int) -> fl
     Higher = rank is well within closing rank (more margin).
     """
     if closing_rank == opening_rank:
+        if rank <= closing_rank:
+            return 1.0
         return 0.5
-    # Normalize: 1.0 means rank equals opening (dream), 0.0 means rank equals closing
+    
+    if rank <= opening_rank:
+        return 1.0
+        
     safety = (closing_rank - rank) / (closing_rank - opening_rank)
     return max(0.0, min(1.0, safety))
-
-
-def compute_campus_score(preferred: str, college_campus: str) -> float:
-    """1.0 for exact match, 0.5 for no preference, 0.0 otherwise."""
-    if preferred == "No preference":
-        return 0.5
-    mapping = {"Large campus": "large", "Small campus": "small", "Medium campus": "medium"}
-    pref_val = mapping.get(preferred, preferred.lower())
-    if pref_val == college_campus.lower():
-        return 1.0
-    return 0.0
-
-
-def compute_food_score(preferred: str, college_food: str) -> float:
-    """1.0 for match, 0.5 for no preference or mixed, 0.0 otherwise."""
-    if preferred == "No preference":
-        return 0.5
-    if preferred == "Veg only" and college_food in ("veg", "mixed"):
-        return 1.0 if college_food == "veg" else 0.7
-    if preferred == "Non-veg ok":
-        return 1.0 if college_food in ("non-veg", "mixed") else 0.3
-    return 0.0
-
 
 def classify_college(rank: int, opening_rank: int, closing_rank: int) -> str:
     """
@@ -78,6 +52,9 @@ def classify_college(rank: int, opening_rank: int, closing_rank: int) -> str:
     if closing_rank == opening_rank:
         return "Safe"
 
+    if rank <= opening_rank:
+        return "Safe" # Safe conceptually
+
     position = (closing_rank - rank) / (closing_rank - opening_rank)
 
     if position > 0.7:
@@ -86,7 +63,6 @@ def classify_college(rank: int, opening_rank: int, closing_rank: int) -> str:
         return "Backup"
     else:
         return "Safe"
-
 
 def get_match_level(score: float) -> str:
     """Convert numeric score to human-readable match level."""
@@ -97,71 +73,68 @@ def get_match_level(score: float) -> str:
     else:
         return "Low Match"
 
+def determine_institute_type(institute_name: str) -> str:
+    name_lower = institute_name.lower()
+    if "indian institute of technology" in name_lower and "information" not in name_lower:
+        return "IIT"
+    elif "national institute of technology" in name_lower:
+        return "NIT"
+    elif "indian institute of information technology" in name_lower:
+        return "IIIT"
+    else:
+        return "GFTI"
 
 def build_reason(request: PredictionRequest, college: dict, classification: str, score: float) -> str:
     """Generate a human-readable reason for the recommendation."""
     reasons = []
 
     # Branch match
-    if request.preferred_branch.lower() == college["branch"].lower():
-        reasons.append(f"Exact branch match ({college['branch']})")
-    elif college["branch"] in RELATED_BRANCHES.get(request.preferred_branch, []):
-        reasons.append(f"Related branch ({college['branch']})")
-
-    # Region
-    if request.preferred_region == "Any":
-        reasons.append(f"Located in {college['region']} India")
-    elif request.preferred_region.lower() == college["region"].lower():
-        reasons.append(f"Matches your preferred region ({college['region']})")
-
+    if request.preferred_branch.lower() != "any" and request.preferred_branch.strip():
+        if request.preferred_branch.lower() in college["program"].lower():
+            reasons.append("Matches preferred branch")
+    
     # Classification context
     if classification == "Dream":
-        reasons.append("Your rank is well within the cutoff — aspirational pick")
+        reasons.append("Your rank is comfortably within the cutoff — aspirational pick")
     elif classification == "Safe":
         reasons.append("Comfortable rank margin — solid choice")
     else:
         reasons.append("Rank is close to cutoff — good backup option")
 
-    # Fees
-    if request.max_fee and college["average_fees"] <= request.max_fee:
-        reasons.append(f"Within your fee budget (₹{college['average_fees']:,})")
-
     return ". ".join(reasons) + "."
-
 
 def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
     """
     Main prediction pipeline:
     1. Filter eligible colleges (rank <= closing_rank)
-    2. Optionally filter by max fee
+    2. Filter by institute_type
     3. Score each college
     4. Classify into Dream / Safe / Backup
     5. Return sorted results
     """
     results = {"dream": [], "safe": [], "backup": []}
 
+    allowed_types = [t.lower() for t in request.institute_types] if request.institute_types else []
+
     for college in colleges:
         # Step 1: Filter by rank eligibility
         if request.rank > college["closing_rank"]:
             continue
 
-        # Step 2: Filter by max fee (if specified)
-        if request.max_fee and college["average_fees"] > request.max_fee:
+        # Step 2: Institute Type filtering
+        inst_type = determine_institute_type(college["institute"])
+        if allowed_types and inst_type.lower() not in allowed_types:
             continue
 
         # Step 3: Compute weighted score
-        branch_score = compute_branch_score(request.preferred_branch, college["branch"])
-        region_score = compute_region_score(request.preferred_region, college["region"])
-        cutoff_safety = compute_cutoff_safety(request.rank, college["opening_rank"], college["closing_rank"])
-        campus_score = compute_campus_score(request.campus_preference, college["campus_size"])
-        food_score = compute_food_score(request.food_preference, college["food_option"])
+        branch_score = compute_branch_score(request.preferred_branch, college["program"])
+        safety_score = compute_cutoff_safety(request.rank, college["opening_rank"], college["closing_rank"])
+        prestige_score = compute_institute_prestige(college["institute"])
 
         total_score = (
             0.40 * branch_score +
-            0.20 * region_score +
-            0.15 * cutoff_safety +
-            0.15 * campus_score +
-            0.10 * food_score
+            0.30 * safety_score +
+            0.30 * prestige_score
         )
         total_score = round(total_score, 3)
 
@@ -173,18 +146,18 @@ def predict_colleges(request: PredictionRequest, colleges: list) -> dict:
         reason = build_reason(request, college, classification, total_score)
 
         result = CollegeResult(
-            college_name=college["college_name"],
-            branch=college["branch"],
+            institute=college["institute"],
+            program=college["program"],
+            quota=college["quota"],
+            seat_type=college["seat_type"],
+            gender=college["gender"],
             opening_rank=college["opening_rank"],
             closing_rank=college["closing_rank"],
-            region=college["region"],
-            average_fees=college["average_fees"],
-            campus_size=college["campus_size"],
-            food_option=college["food_option"],
             score=total_score,
             classification=classification,
             match_level=match_level,
             reason=reason,
+            institute_type=inst_type,
         )
 
         results[classification.lower()].append(result)

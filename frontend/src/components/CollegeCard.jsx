@@ -13,7 +13,7 @@ function CollegeCard({ college }) {
     <div className={`college-card ${classLower}`}>
       {/* Top: Name + Badge */}
       <div className="card-top">
-        <h3 className="college-name">{college.college_name}</h3>
+        <h3 className="college-name">{college.institute}</h3>
         <span className={`classification-badge ${classLower}`}>
           {college.classification}
         </span>
@@ -21,29 +21,25 @@ function CollegeCard({ college }) {
 
       {/* Detail chips */}
       <div className="card-details">
-        <span className="detail-chip">
+        <span className="detail-chip" title={college.program}>
           <span className="detail-chip-icon">📚</span>
-          {college.branch}
+          {college.program.length > 50 ? college.program.substring(0, 47) + '...' : college.program}
         </span>
-        <span className="detail-chip">
+        <span className="detail-chip" title="Institute Type">
+          <span className="detail-chip-icon">🏫</span>
+          {college.institute_type}
+        </span>
+        <span className="detail-chip" title="Opening & Closing Rank">
           <span className="detail-chip-icon">🎯</span>
-          Closing: {college.closing_rank.toLocaleString()}
+          {college.opening_rank.toLocaleString()} → {college.closing_rank.toLocaleString()}
         </span>
-        <span className="detail-chip">
+        <span className="detail-chip" title="Quota">
           <span className="detail-chip-icon">📍</span>
-          {college.region}
+          Quota: {college.quota}
         </span>
-        <span className="detail-chip">
-          <span className="detail-chip-icon">💰</span>
-          ₹{college.average_fees.toLocaleString()}/yr
-        </span>
-        <span className="detail-chip">
-          <span className="detail-chip-icon">🏛️</span>
-          {college.campus_size}
-        </span>
-        <span className="detail-chip">
-          <span className="detail-chip-icon">🍽️</span>
-          {college.food_option}
+        <span className="detail-chip" title="Seat Type & Gender">
+          <span className="detail-chip-icon">📋</span>
+          {college.seat_type} ({college.gender === 'Gender-Neutral' ? 'GN' : 'Female'})
         </span>
       </div>
 

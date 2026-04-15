@@ -1,6 +1,6 @@
-# JEE College Predictor & JoSAA Preference Builder
+# Rank Wise — JEE College Predictor & JoSAA Preference Builder
 
-A full-stack web application that helps JEE Main/Advanced students predict the best engineering colleges based on their rank, category, and personal preferences. Outputs a personalized, ordered college list suitable for JoSAA counselling.
+Rank Wise is a full-stack web application that helps JEE Main/Advanced students predict the best engineering colleges based on their rank, category, and personal preferences. Outputs a personalized, ordered college list suitable for JoSAA counselling.
 
 ## Tech Stack
 
@@ -13,7 +13,7 @@ A full-stack web application that helps JEE Main/Advanced students predict the b
 - **Rank-based filtering** — shows only colleges where your rank qualifies
 - **Weighted scoring** — branch match (40%), region (20%), cutoff safety (15%), campus (15%), food preference (10%)
 - **3-tier classification** — Dream / Safe / Backup colleges
-- **JoSAA Preference List** — generate an ordered preference list with copy-to-clipboard
+- **Rank Wise Preference List** — generate an ordered preference list with copy-to-clipboard
 - **Dark / Light mode** toggle
 - **Responsive card-based UI** with glassmorphism design
 
@@ -50,7 +50,7 @@ Open `http://localhost:5173` in your browser.
 2. Select exam type (Main / Advanced), category, and preferences
 3. Click **"Predict Colleges"**
 4. View categorized results (Dream / Safe / Backup)
-5. Click **"Generate JoSAA Preference List"** for an ordered list
+5. Click **"Generate Rank Wise Preference List"** for an ordered list
 
 ## Project Structure
 

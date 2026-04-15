@@ -1,33 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const BRANCHES = ['CSE', 'ECE', 'Electrical', 'Mechanical', 'Civil', 'Chemical'];
-const CATEGORIES = ['General', 'OBC', 'SC', 'ST', 'EWS'];
-const REGIONS = ['Any', 'North', 'South', 'East', 'West'];
+const SEAT_TYPES = ["OPEN", "EWS", "OBC-NCL", "SC", "ST", "OPEN (PwD)", "EWS (PwD)", "OBC-NCL (PwD)", "SC (PwD)", "ST (PwD)"];
+const GENDERS = ["Gender-Neutral", "Female-only (including Supernumerary)"];
+const QUOTAS = ["AI", "HS", "OS", "GO", "JK", "LA"];
+const ROUNDS = [1, 2, 3, 4, 5];
+const INSTITUTE_TYPES = ["IIT", "NIT", "IIIT", "GFTI"];
 
 function InputForm({ onSubmit, loading }) {
   const [formData, setFormData] = useState({
     rank: '',
-    exam_type: 'Main',
-    category: 'General',
-    preferred_branch: 'CSE',
-    preferred_region: 'Any',
-    max_fee: '',
-    campus_preference: 'No preference',
-    food_preference: 'No preference',
+    round_no: 5,
+    seat_type: 'OPEN',
+    gender: 'Gender-Neutral',
+    quota: 'AI',
+    preferred_branch: '',
+    institute_types: {
+      IIT: true,
+      NIT: true,
+      IIIT: true,
+      GFTI: true,
+    }
   });
+
+  const [programs, setPrograms] = useState([]);
+
+  useEffect(() => {
+    // Fetch programs for autocomplete
+    const fetchPrograms = async () => {
+      try {
+        const res = await axios.get('http://localhost:8000/programs');
+        setPrograms(res.data.programs);
+      } catch (e) {
+        console.error("Failed to load programs", e);
+      }
+    };
+    fetchPrograms();
+  }, []);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleInstTypeChange = (type) => {
+    setFormData(prev => ({
+      ...prev,
+      institute_types: {
+        ...prev.institute_types,
+        [type]: !prev.institute_types[type]
+      }
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.rank || parseInt(formData.rank) <= 0) return;
 
+    // Convert institute_types object to array of selected strings
+    const selectedInstTypes = Object.entries(formData.institute_types)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([type, _]) => type);
+
     const payload = {
       ...formData,
       rank: parseInt(formData.rank),
-      max_fee: formData.max_fee ? parseInt(formData.max_fee) : null,
+      round_no: parseInt(formData.round_no),
+      institute_types: selectedInstTypes
     };
 
     onSubmit(payload);
@@ -41,7 +79,7 @@ function InputForm({ onSubmit, loading }) {
       <div className="form-grid">
         {/* JEE Rank */}
         <div className="form-group">
-          <label className="form-label" htmlFor="rank-input">JEE Rank</label>
+          <label className="form-label" htmlFor="rank-input">JEE Rank (Category/CRL Rank)</label>
           <input
             type="number"
             id="rank-input"
@@ -54,127 +92,99 @@ function InputForm({ onSubmit, loading }) {
           />
         </div>
 
-        {/* Exam Type */}
+        {/* Round */}
         <div className="form-group">
-          <label className="form-label">Exam Type</label>
-          <div className="radio-group">
-            {['Main', 'Advanced'].map(type => (
-              <div className="radio-option" key={type}>
-                <input
-                  type="radio"
-                  id={`exam-${type}`}
-                  name="exam_type"
-                  value={type}
-                  checked={formData.exam_type === type}
-                  onChange={(e) => handleChange('exam_type', e.target.value)}
-                />
-                <label className="radio-label" htmlFor={`exam-${type}`}>
-                  JEE {type}
-                </label>
-              </div>
+          <label className="form-label" htmlFor="round-select">JoSAA Round</label>
+          <select
+            id="round-select"
+            className="form-select"
+            value={formData.round_no}
+            onChange={(e) => handleChange('round_no', e.target.value)}
+          >
+            {ROUNDS.map(r => (
+              <option key={r} value={r}>Round {r}</option>
             ))}
-          </div>
+          </select>
         </div>
 
-        {/* Category */}
+        {/* Seat Type */}
         <div className="form-group">
-          <label className="form-label" htmlFor="category-select">Category</label>
+          <label className="form-label" htmlFor="seat-type-select">Seat Type</label>
           <select
-            id="category-select"
+            id="seat-type-select"
             className="form-select"
-            value={formData.category}
-            onChange={(e) => handleChange('category', e.target.value)}
+            value={formData.seat_type}
+            onChange={(e) => handleChange('seat_type', e.target.value)}
           >
-            {CATEGORIES.map(cat => (
+            {SEAT_TYPES.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
-
-        {/* Branch */}
+        
+        {/* Gender */}
         <div className="form-group">
-          <label className="form-label" htmlFor="branch-select">Preferred Branch</label>
+          <label className="form-label" htmlFor="gender-select">Gender</label>
           <select
-            id="branch-select"
+            id="gender-select"
             className="form-select"
+            value={formData.gender}
+            onChange={(e) => handleChange('gender', e.target.value)}
+          >
+            {GENDERS.map(g => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Quota */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="quota-select">Quota</label>
+          <select
+            id="quota-select"
+            className="form-select"
+            value={formData.quota}
+            onChange={(e) => handleChange('quota', e.target.value)}
+          >
+            {QUOTAS.map(q => (
+              <option key={q} value={q}>{q} {q === 'AI' ? '(All India)' : q === 'HS' ? '(Home State)' : q === 'OS' ? '(Other State)' : ''}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Preferred Branch */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="branch-input">Preferred Branch (Keyword)</label>
+          <input
+            type="text"
+            id="branch-input"
+            className="form-input"
+            placeholder="e.g. Computer Science, Any"
             value={formData.preferred_branch}
             onChange={(e) => handleChange('preferred_branch', e.target.value)}
-          >
-            {BRANCHES.map(branch => (
-              <option key={branch} value={branch}>{branch}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Region */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="region-select">Preferred Region</label>
-          <select
-            id="region-select"
-            className="form-select"
-            value={formData.preferred_region}
-            onChange={(e) => handleChange('preferred_region', e.target.value)}
-          >
-            {REGIONS.map(region => (
-              <option key={region} value={region}>{region}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Max Fee */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="fee-input">Max Fee Range (₹/year)</label>
-          <input
-            type="number"
-            id="fee-input"
-            className="form-input"
-            placeholder="e.g. 300000 (optional)"
-            min="0"
-            value={formData.max_fee}
-            onChange={(e) => handleChange('max_fee', e.target.value)}
+            list="program-suggestions"
           />
-        </div>
-
-        {/* Campus Preference */}
-        <div className="form-group">
-          <label className="form-label">Campus Preference</label>
-          <div className="radio-group">
-            {['Large campus', 'Small campus', 'No preference'].map(option => (
-              <div className="radio-option" key={option}>
-                <input
-                  type="radio"
-                  id={`campus-${option}`}
-                  name="campus_preference"
-                  value={option}
-                  checked={formData.campus_preference === option}
-                  onChange={(e) => handleChange('campus_preference', e.target.value)}
-                />
-                <label className="radio-label" htmlFor={`campus-${option}`}>
-                  {option === 'Large campus' ? '🏛️ ' : option === 'Small campus' ? '🏠 ' : '🤷 '}
-                  {option}
-                </label>
-              </div>
+          <datalist id="program-suggestions">
+            {programs.map(p => (
+              <option key={p} value={p} />
             ))}
-          </div>
+          </datalist>
         </div>
 
-        {/* Food Preference */}
-        <div className="form-group">
-          <label className="form-label">Food Preference</label>
-          <div className="radio-group">
-            {['Veg only', 'Non-veg ok', 'No preference'].map(option => (
-              <div className="radio-option" key={option}>
+        {/* Institute Types */}
+        <div className="form-group full-width">
+          <label className="form-label">Institute Types</label>
+          <div className="radio-group" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            {INSTITUTE_TYPES.map(type => (
+              <div className="radio-option" key={type} style={{ width: 'auto' }}>
                 <input
-                  type="radio"
-                  id={`food-${option}`}
-                  name="food_preference"
-                  value={option}
-                  checked={formData.food_preference === option}
-                  onChange={(e) => handleChange('food_preference', e.target.value)}
+                  type="checkbox"
+                  id={`inst-${type}`}
+                  checked={formData.institute_types[type]}
+                  onChange={() => handleInstTypeChange(type)}
                 />
-                <label className="radio-label" htmlFor={`food-${option}`}>
-                  {option === 'Veg only' ? '🥬 ' : option === 'Non-veg ok' ? '🍗 ' : '🤷 '}
-                  {option}
+                <label className="radio-label" htmlFor={`inst-${type}`} style={{ paddingLeft: '5px' }}>
+                  {type}
                 </label>
               </div>
             ))}
@@ -182,7 +192,7 @@ function InputForm({ onSubmit, loading }) {
         </div>
 
         {/* Submit Button */}
-        <div className="form-group full-width" style={{ alignItems: 'center' }}>
+        <div className="form-group full-width" style={{ alignItems: 'center', marginTop: '1rem' }}>
           <button type="submit" className="submit-btn" disabled={loading} id="predict-btn">
             {loading ? (
               <>

@@ -40,7 +40,7 @@ function ResultsView({ results, onGenerateList }) {
             onClick={onGenerateList}
             id="generate-list-btn"
           >
-            📋 Generate JoSAA Preference List
+            📋 Generate Rank Wise Preference List
           </button>
         )}
       </div>

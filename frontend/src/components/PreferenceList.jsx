@@ -5,7 +5,7 @@ function PreferenceList({ colleges, onClose }) {
 
   const handleCopy = () => {
     const text = colleges
-      .map((c, i) => `${i + 1}. ${c.college_name} — ${c.branch} (Score: ${Math.round(c.score * 100)}%)`)
+      .map((c, i) => `${i + 1}. ${c.institute} — ${c.program} - ${c.quota} - ${c.seat_type} (Score: ${Math.round(c.score * 100)}%)`)
       .join('\n');
 
     navigator.clipboard.writeText(text).then(() => {
@@ -35,7 +35,7 @@ function PreferenceList({ colleges, onClose }) {
       <div className="modal-content" id="preference-list-modal">
         {/* Header */}
         <div className="modal-header">
-          <h3 className="modal-title">📋 JoSAA Preference List</h3>
+          <h3 className="modal-title">📋 Rank Wise Preference List</h3>
           <button className="modal-close" onClick={onClose} id="close-modal-btn">
             ✕
           </button>
@@ -50,9 +50,9 @@ function PreferenceList({ colleges, onClose }) {
               <div className="preference-item" key={index}>
                 <div className="preference-rank">{index + 1}</div>
                 <div className="preference-info">
-                  <div className="preference-college">{college.college_name}</div>
+                  <div className="preference-college">{college.institute}</div>
                   <div className="preference-branch">
-                    {college.branch} · Closing Rank: {college.closing_rank.toLocaleString()} · {college.classification}
+                    {college.program} · Quota: {college.quota} · closing: {college.closing_rank.toLocaleString()}
                   </div>
                 </div>
                 <div className="preference-score">

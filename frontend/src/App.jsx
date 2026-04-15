@@ -9,7 +9,7 @@ const API_BASE = 'http://localhost:8000';
 
 function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('josaa-theme') || 'light';
+    return localStorage.getItem('rankwise-theme') || 'light';
   });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('josaa-theme', theme);
+    localStorage.setItem('rankwise-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
@@ -58,8 +58,8 @@ function App() {
           <div className="logo">
             <div className="logo-icon">🎓</div>
             <div>
-              <h1>JoSAA Predictor</h1>
-              <div className="logo-subtitle">JEE College Predictor & Preference Builder</div>
+              <h1>Rank Wise</h1>
+              <div className="logo-subtitle">Smart JEE College Predictor & Preference Builder</div>
             </div>
           </div>
           <button className="theme-toggle" onClick={toggleTheme} id="theme-toggle-btn">

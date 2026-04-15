@@ -1,12 +1,12 @@
 """
-FastAPI application — JEE College Predictor API.
+FastAPI application — Rank Wise API.
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from database import init_db, get_colleges, get_all_branches
+from database import init_db, get_colleges, get_all_programs, get_all_institutes
 from models import PredictionRequest, PredictionResponse
 from scoring import predict_colleges
 
@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="JEE College Predictor API",
+    title="Rank Wise API",
     description="Predicts best colleges based on JEE rank and preferences",
     version="1.0.0",
     lifespan=lifespan,
@@ -38,14 +38,20 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "message": "JEE College Predictor API is running"}
+    return {"status": "ok", "message": "Rank Wise API is running"}
 
 
-@app.get("/branches")
-async def list_branches():
-    """Return available branches."""
-    branches = get_all_branches()
-    return {"branches": branches}
+@app.get("/programs")
+async def list_programs():
+    """Return available programs."""
+    programs = get_all_programs()
+    return {"programs": programs}
+
+@app.get("/institutes")
+async def list_institutes():
+    """Return available institutes."""
+    institutes = get_all_institutes()
+    return {"institutes": institutes}
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -54,17 +60,19 @@ async def predict(request: PredictionRequest):
     Main prediction endpoint.
     Accepts user rank + preferences, returns categorized college list.
     """
-    # Validate exam type
-    if request.exam_type not in ("Main", "Advanced"):
-        raise HTTPException(status_code=400, detail="exam_type must be 'Main' or 'Advanced'")
+    valid_seat_types = ("OPEN", "EWS", "OBC-NCL", "SC", "ST", "OPEN (PwD)", "EWS (PwD)", "OBC-NCL (PwD)", "SC (PwD)", "ST (PwD)")
+    if request.seat_type not in valid_seat_types:
+        raise HTTPException(status_code=400, detail=f"seat_type must be one of {valid_seat_types}")
 
-    # Validate category
-    valid_categories = ("General", "OBC", "SC", "ST", "EWS")
-    if request.category not in valid_categories:
-        raise HTTPException(status_code=400, detail=f"category must be one of {valid_categories}")
+    valid_genders = ("Gender-Neutral", "Female-only (including Supernumerary)")
+    if request.gender not in valid_genders:
+        raise HTTPException(status_code=400, detail=f"gender must be one of {valid_genders}")
 
-    # Fetch eligible colleges from DB
-    colleges = get_colleges(request.exam_type, request.category)
+    valid_quotas = ("AI", "HS", "OS", "GO", "JK", "LA")
+    if request.quota not in valid_quotas:
+        raise HTTPException(status_code=400, detail=f"quota must be one of {valid_quotas}")
+
+    colleges = get_colleges(request.round_no, request.seat_type, request.gender, request.quota)
 
     if not colleges:
         return PredictionResponse(dream=[], safe=[], backup=[], total_matches=0)
